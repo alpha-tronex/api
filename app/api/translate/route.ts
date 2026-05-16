@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
 const LANGUAGE_NAMES: Record<string, string> = {
   en: 'English',
   es: 'Spanish',
@@ -15,6 +13,7 @@ const LANGUAGE_NAMES: Record<string, string> = {
 };
 
 export async function POST(req: NextRequest) {
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   try {
     const { transcript, fromLang, toLang } = await req.json();
 
