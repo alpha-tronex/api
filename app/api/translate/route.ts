@@ -10,6 +10,8 @@ const LANGUAGE_NAMES: Record<string, string> = {
   de: 'German',
   zh: 'Mandarin Chinese',
   ar: 'Arabic',
+  ja: 'Japanese',
+  ko: 'Korean',
 };
 
 export async function POST(req: NextRequest) {
