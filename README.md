@@ -34,3 +34,35 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Checks
+
+```bash
+npm run lint
+npm run typecheck   # next typegen && tsc --noEmit
+npm test            # vitest; tests live in __tests__/ next to the code
+```
+
+CI (`.github/workflows/ci.yml`) runs all three on every pull request and every push to `main`.
+
+## Rate limiting and request limits
+
+`/api/transcribe` and `/api/translate` are rate-limited with Upstash Redis (`lib/ratelimit.ts`):
+
+| Limit | Key | Default | Env override |
+|---|---|---|---|
+| Per device | `X-Device-Id` header (random ID made by the app) | 30 requests / 10 min | `RATE_LIMIT_DEVICE_PER_10MIN` |
+| Per network | client IP | 300 requests / hour | `RATE_LIMIT_IP_PER_HOUR` |
+
+- **Response:** over-limit requests get `429` with a `Retry-After` header.
+- **Older apps:** v1.0 apps don't send a device ID, so they are limited by IP only.
+- **Privacy:** Redis only stores SHA-256 hashes of the IDs, and they expire within the window.
+- **Redis down:** if Redis is unreachable, requests are **allowed** (fail open), and the OpenAI spend cap is the backstop.
+- **Local dev:** with no Redis credentials, rate limiting is off and a warning is logged.
+
+Credentials: `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN`, or `KV_REST_API_URL` + `KV_REST_API_TOKEN` (the names set by the Vercel Marketplace integration).
+
+Size limits (`lib/limits.ts`) return `413`:
+
+- **Audio:** over 2 MB is rejected with `Recording too long`.
+- **Transcript:** over 1,000 characters is rejected with `Text too long`.

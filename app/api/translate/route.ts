@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { rejectOversizedTranscript } from '@/lib/limits';
+import { enforceRateLimit } from '@/lib/ratelimit';
 
 const LANGUAGE_NAMES: Record<string, string> = {
   en: 'English',
@@ -13,6 +15,9 @@ const LANGUAGE_NAMES: Record<string, string> = {
 };
 
 export async function POST(req: NextRequest) {
+  const limited = await enforceRateLimit(req);
+  if (limited) return limited;
+
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   try {
     const { transcript, fromLang, toLang } = await req.json();
@@ -23,6 +28,9 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    const textTooLong = rejectOversizedTranscript(String(transcript));
+    if (textTooLong) return textTooLong;
 
     const fromName = LANGUAGE_NAMES[fromLang] ?? fromLang;
     const toName   = LANGUAGE_NAMES[toLang]   ?? toLang;

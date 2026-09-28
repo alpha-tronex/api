@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Lint, typecheck, unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Every check below runs even if an earlier one fails (`!cancelled()`),
+      # so a PR shows all problems at once instead of one per push.
+      - name: Lint
+        if: ${{ !cancelled() }}
+        run: npm run lint
+
+      # `next typegen` writes next-env.d.ts and route types (both gitignored)
+      # before tsc runs, so CI sees the same types as a local build.
+      - name: Typecheck
+        if: ${{ !cancelled() }}
+        run: npm run typecheck
+
+      - name: Unit tests
+        if: ${{ !cancelled() }}
+        run: npm test

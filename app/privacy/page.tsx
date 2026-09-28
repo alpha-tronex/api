@@ -6,7 +6,7 @@ export default function PrivacyPage() {
   return (
     <main style={styles.container}>
       <h1 style={styles.h1}>Privacy Policy — Thiam Language Translator</h1>
-      <p style={styles.meta}>Last updated: May 25, 2026</p>
+      <p style={styles.meta}>Last updated: September 27, 2026</p>
 
       <hr style={styles.hr} />
 
@@ -36,11 +36,17 @@ export default function PrivacyPage() {
             <td style={styles.td}>To perform the correct translation</td>
             <td style={styles.td}>Sent to OpenAI, not stored by us</td>
           </tr>
+          <tr>
+            <td style={styles.td}><strong>Random app-install ID and IP address</strong></td>
+            <td style={styles.td}>To limit how many requests one device or network can make, which prevents abuse</td>
+            <td style={styles.td}>Only a one-way hash is kept, for at most one hour</td>
+          </tr>
         </tbody>
       </table>
       <p style={styles.p}>
-        We do not collect your name, email address, location, device identifiers, or any other
-        personal information.
+        The app-install ID is a random number the app creates the first time it runs. It is not
+        linked to you, your device&apos;s hardware or advertising identifiers, or any account. We do
+        not collect your name, email address, location, or any other personal information.
       </p>
 
       <h2 style={styles.h2}>How Your Data Is Used</h2>
@@ -70,17 +76,25 @@ export default function PrivacyPage() {
         <li style={styles.li}>We do not store your transcripts or translations.</li>
         <li style={styles.li}>We do not have a database of user data.</li>
         <li style={styles.li}>
+          To prevent abuse, request counters keyed by a one-way hash of the app-install ID and IP
+          address are kept by Upstash (our rate-limiting provider) and expire within one hour.
+        </li>
+        <li style={styles.li}>
           The only data that temporarily passes through our backend is your audio and language
           selections, solely to forward them to OpenAI and return the result.
         </li>
       </ul>
 
       <h2 style={styles.h2}>Third-Party Services</h2>
-      <p style={styles.p}>This app uses the following third-party service:</p>
+      <p style={styles.p}>This app uses the following third-party services:</p>
       <ul style={styles.ul}>
         <li style={styles.li}>
           <strong>OpenAI</strong> — for transcription, translation, and text-to-speech. Subject to
           OpenAI&apos;s privacy policy and terms of service.
+        </li>
+        <li style={styles.li}>
+          <strong>Upstash</strong> — for rate limiting. Receives only hashed identifiers, never your
+          audio or text.
         </li>
       </ul>
 
