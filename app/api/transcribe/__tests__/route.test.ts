@@ -39,7 +39,28 @@ describe('POST /api/transcribe', () => {
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ transcript: 'Where is the station?' });
-    expect(transcriptionsCreate).toHaveBeenCalledWith(expect.objectContaining({ language: 'en' }));
+    expect(transcriptionsCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ model: 'gpt-transcribe', languages: ['en'] })
+    );
+  });
+
+  test('returns the language gpt-transcribe detected, for auto-detect', async () => {
+    transcriptionsCreate.mockResolvedValue({ text: 'Hola', languages: [{ code: 'es' }] });
+
+    const res = await POST(upload({ audio: smallAudio(), fromLang: 'es' }));
+
+    expect(await res.json()).toEqual({ transcript: 'Hola', detectedLang: 'es' });
+  });
+
+  test('STT_MODEL=whisper-1 rolls back to the old model with its single-language parameter', async () => {
+    vi.stubEnv('STT_MODEL', 'whisper-1');
+    transcriptionsCreate.mockResolvedValue({ text: 'Hello' });
+
+    await POST(upload({ audio: smallAudio(), fromLang: 'en' }));
+
+    const params = transcriptionsCreate.mock.calls[0][0];
+    expect(params).toMatchObject({ model: 'whisper-1', language: 'en' });
+    expect(params).not.toHaveProperty('languages');
   });
 
   test('returns the rate limiter response without calling OpenAI', async () => {

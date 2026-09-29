@@ -40,7 +40,22 @@ describe('POST /api/translate', () => {
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ translation: 'Hola', audioBase64: 'AQID', mimeType: 'audio/mpeg' });
-    expect(speechCreate).toHaveBeenCalledWith(expect.objectContaining({ input: 'Hola' }));
+    expect(chatCreate).toHaveBeenCalledWith(expect.objectContaining({ model: 'gpt-4o-mini' }));
+    expect(chatCreate.mock.calls[0][0]).not.toHaveProperty('reasoning_effort');
+    expect(speechCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ model: 'gpt-4o-mini-tts', voice: 'marin', input: 'Hola' })
+    );
+  });
+
+  test('TRANSLATE_MODEL and TRANSLATE_REASONING_EFFORT switch the translation model', async () => {
+    vi.stubEnv('TRANSLATE_MODEL', 'gpt-6-luna');
+    vi.stubEnv('TRANSLATE_REASONING_EFFORT', 'none');
+
+    await POST(translate({ transcript: 'Hello', fromLang: 'en', toLang: 'es' }));
+
+    expect(chatCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ model: 'gpt-6-luna', reasoning_effort: 'none' })
+    );
   });
 
   test('returns the rate limiter response without calling OpenAI', async () => {

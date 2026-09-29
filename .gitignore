@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# model eval: recordings may contain students' voices; results are local
+/eval/audio/
+/eval/results/

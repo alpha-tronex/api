@@ -1,0 +1,52 @@
+{
+  "_comment": "Golden test set. Record each phrase as eval/audio/<id>.m4a (see eval/README.md). Add phrases freely; ids must be unique.",
+  "phrases": [
+    { "id": "en-01", "lang": "en", "text": "Where is the train station?" },
+    { "id": "en-02", "lang": "en", "text": "Can you speak more slowly, please?" },
+    { "id": "en-03", "lang": "en", "text": "I would like a glass of water." },
+    { "id": "en-04", "lang": "en", "text": "My name is Maria and I am a student." },
+    { "id": "en-05", "lang": "en", "text": "What time does the class start tomorrow?" },
+
+    { "id": "es-01", "lang": "es", "text": "¿Dónde está la estación de tren?" },
+    { "id": "es-02", "lang": "es", "text": "¿Puede hablar más despacio, por favor?" },
+    { "id": "es-03", "lang": "es", "text": "Quisiera un vaso de agua." },
+    { "id": "es-04", "lang": "es", "text": "Me llamo María y soy estudiante." },
+    { "id": "es-05", "lang": "es", "text": "¿A qué hora empieza la clase mañana?" },
+
+    { "id": "fr-01", "lang": "fr", "text": "Où est la gare ?" },
+    { "id": "fr-02", "lang": "fr", "text": "Pouvez-vous parler plus lentement, s'il vous plaît ?" },
+    { "id": "fr-03", "lang": "fr", "text": "Je voudrais un verre d'eau." },
+    { "id": "fr-04", "lang": "fr", "text": "Je m'appelle Maria et je suis étudiante." },
+    { "id": "fr-05", "lang": "fr", "text": "À quelle heure commence le cours demain ?" },
+
+    { "id": "de-01", "lang": "de", "text": "Wo ist der Bahnhof?" },
+    { "id": "de-02", "lang": "de", "text": "Können Sie bitte langsamer sprechen?" },
+    { "id": "de-03", "lang": "de", "text": "Ich hätte gern ein Glas Wasser." },
+    { "id": "de-04", "lang": "de", "text": "Ich heiße Maria und bin Studentin." },
+    { "id": "de-05", "lang": "de", "text": "Wann beginnt der Unterricht morgen?" },
+
+    { "id": "zh-01", "lang": "zh", "text": "火车站在哪里？" },
+    { "id": "zh-02", "lang": "zh", "text": "请你说慢一点，好吗？" },
+    { "id": "zh-03", "lang": "zh", "text": "我想要一杯水。" },
+    { "id": "zh-04", "lang": "zh", "text": "我叫玛丽亚，我是学生。" },
+    { "id": "zh-05", "lang": "zh", "text": "明天几点开始上课？" },
+
+    { "id": "ar-01", "lang": "ar", "text": "أين محطة القطار؟" },
+    { "id": "ar-02", "lang": "ar", "text": "هل يمكنك التحدث ببطء أكثر من فضلك؟" },
+    { "id": "ar-03", "lang": "ar", "text": "أريد كوبًا من الماء." },
+    { "id": "ar-04", "lang": "ar", "text": "اسمي ماريا وأنا طالبة." },
+    { "id": "ar-05", "lang": "ar", "text": "متى يبدأ الدرس غدًا؟" },
+
+    { "id": "ja-01", "lang": "ja", "text": "駅はどこですか？" },
+    { "id": "ja-02", "lang": "ja", "text": "もう少しゆっくり話していただけますか？" },
+    { "id": "ja-03", "lang": "ja", "text": "水を一杯ください。" },
+    { "id": "ja-04", "lang": "ja", "text": "私の名前はマリアで、学生です。" },
+    { "id": "ja-05", "lang": "ja", "text": "明日の授業は何時に始まりますか？" },
+
+    { "id": "ko-01", "lang": "ko", "text": "기차역이 어디에 있어요?" },
+    { "id": "ko-02", "lang": "ko", "text": "좀 더 천천히 말씀해 주시겠어요?" },
+    { "id": "ko-03", "lang": "ko", "text": "물 한 잔 주세요." },
+    { "id": "ko-04", "lang": "ko", "text": "제 이름은 마리아이고 학생이에요." },
+    { "id": "ko-05", "lang": "ko", "text": "내일 수업은 몇 시에 시작해요?" }
+  ]
+}

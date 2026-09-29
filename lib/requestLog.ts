@@ -13,6 +13,10 @@ export type LogFields = {
   transcriptChars?: number;
   translationChars?: number;
   outcome?: string;
+  sttModel?: string;
+  translateModel?: string;
+  ttsModel?: string;
+  detectedLang?: string;
 };
 
 export type RequestLog = {
@@ -38,6 +42,7 @@ export function startRequestLog(route: string, req: Request, now: () => number =
       Object.assign(fields, more);
       if ('fromLang' in more) fields.fromLang = safeLang(more.fromLang);
       if ('toLang' in more) fields.toLang = safeLang(more.toLang);
+      if ('detectedLang' in more) fields.detectedLang = safeLang(more.detectedLang);
     },
     finish(res) {
       console.log(

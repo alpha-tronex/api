@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { checkAppAuth } from '@/lib/appAuth';
 import { rejectOversizedTranscript } from '@/lib/limits';
+import { getModelConfig, speechParams } from '@/lib/models';
 import { enforceRateLimit } from '@/lib/ratelimit';
 import { startRequestLog, type RequestLog } from '@/lib/requestLog';
 
@@ -54,12 +55,16 @@ async function handle(req: NextRequest, log: RequestLog): Promise<NextResponse> 
       return textTooLong;
     }
 
+    const models = getModelConfig();
+    log.set({ translateModel: models.translateModel, ttsModel: models.ttsModel });
+
     const fromName = LANGUAGE_NAMES[fromLang] ?? fromLang;
     const toName   = LANGUAGE_NAMES[toLang]   ?? toLang;
 
-    // Step 1: translate with GPT-4o-mini
+    // Step 1: translate
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: models.translateModel,
+      ...(models.translateReasoningEffort ? { reasoning_effort: models.translateReasoningEffort } : {}),
       messages: [
         {
           role: 'system',
@@ -72,11 +77,7 @@ async function handle(req: NextRequest, log: RequestLog): Promise<NextResponse> 
     const translation = completion.choices[0].message.content?.trim() ?? '';
 
     // Step 2: convert translation to speech
-    const ttsResponse = await openai.audio.speech.create({
-      model: 'tts-1',
-      voice: 'alloy',
-      input: translation,
-    });
+    const ttsResponse = await openai.audio.speech.create(speechParams(models, translation));
 
     const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
     const audioBase64 = audioBuffer.toString('base64');

@@ -104,3 +104,19 @@ Size limits (`lib/limits.ts`) return `413`:
 The logs never include transcript or translation text, device IDs or IP addresses.
 
 **When to switch to `enforce`:** once almost no log lines show `"appVersion":"none"`, meaning v1.0 users have updated, set `APP_AUTH_MODE=enforce` in Vercel and re-run the deploy workflow.
+
+## Models
+
+Every model is set by a Vercel environment variable, with a default in `lib/models.ts`. To change one, set the variable and re-run the deploy workflow; no code change is needed. The same steps roll back a model that misbehaves.
+
+| Variable | Default | Notes |
+|---|---|---|
+| `STT_MODEL` | `gpt-transcribe` | `whisper-1` rolls back. The language hint is sent the way each model expects. |
+| `TRANSLATE_MODEL` | `gpt-4o-mini` | Change only after `npm run eval:models` shows a better option |
+| `TRANSLATE_REASONING_EFFORT` | unset | Only for reasoning models, e.g. `none` with `gpt-6-luna` to keep it fast |
+| `TTS_MODEL` | `gpt-4o-mini-tts` | Speaks with clear-speech instructions. `tts-1` rolls back. |
+| `TTS_VOICE` | `marin` | Newer voices fall back to `alloy` on `tts-1` |
+
+`/api/transcribe` also returns `detectedLang` when the model reports it, which auto-detect will use. The request logs record which models served each request.
+
+**Comparing models:** `npm run eval:models` runs the golden test set in `eval/` through several models and writes a side-by-side report. See `eval/README.md`.

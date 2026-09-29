@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI, { toFile } from 'openai';
 import { checkAppAuth } from '@/lib/appAuth';
 import { rejectOversizedAudio, rejectOversizedUpload } from '@/lib/limits';
+import { getModelConfig, transcriptionLanguageParams } from '@/lib/models';
 import { enforceRateLimit } from '@/lib/ratelimit';
 import { startRequestLog, type RequestLog } from '@/lib/requestLog';
 
@@ -48,14 +49,21 @@ async function handle(req: NextRequest, log: RequestLog): Promise<NextResponse> 
       return audioTooLarge;
     }
 
+    const { sttModel } = getModelConfig();
+    log.set({ sttModel });
     const transcription = await openai.audio.transcriptions.create({
-      file:     await toFile(audio, 'recording.m4a', { type: 'audio/m4a' }),
-      model:    'whisper-1',
-      language: fromLang,
+      file:  await toFile(audio, 'recording.m4a', { type: 'audio/m4a' }),
+      model: sttModel,
+      ...transcriptionLanguageParams(sttModel, fromLang),
     });
 
-    log.set({ outcome: 'ok', transcriptChars: transcription.text.length });
-    return NextResponse.json({ transcript: transcription.text });
+    // gpt-transcribe reports the language it heard (used by auto-detect).
+    const detectedLang = transcription.languages?.[0]?.code;
+    log.set({ outcome: 'ok', transcriptChars: transcription.text.length, detectedLang });
+    return NextResponse.json({
+      transcript: transcription.text,
+      ...(detectedLang ? { detectedLang } : {}),
+    });
   } catch (err) {
     console.error('[/api/transcribe]', err);
     log.set({ outcome: 'error' });
