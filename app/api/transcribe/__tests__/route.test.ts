@@ -79,6 +79,35 @@ describe('POST /api/transcribe', () => {
     expect((await POST(upload({ audio: smallAudio() }))).status).toBe(400);
   });
 
+  test('in enforce mode, rejects unsigned uploads with 401 before rate limiting or OpenAI', async () => {
+    vi.stubEnv('APP_AUTH_MODE', 'enforce');
+    vi.stubEnv('APP_SIGNING_KEY', 'test-key');
+
+    const res = await POST(upload({ audio: smallAudio(), fromLang: 'en' }));
+
+    expect(res.status).toBe(401);
+    expect(enforceRateLimit).not.toHaveBeenCalled();
+    expect(transcriptionsCreate).not.toHaveBeenCalled();
+  });
+
+  test('logs audio size and outcome but not the transcript', async () => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    transcriptionsCreate.mockResolvedValue({ text: 'Where is the station?' });
+
+    await POST(upload({ audio: smallAudio(), fromLang: 'en' }));
+
+    const line = log.mock.calls[0][0] as string;
+    expect(JSON.parse(line)).toMatchObject({
+      route: 'transcribe',
+      status: 200,
+      outcome: 'ok',
+      fromLang: 'en',
+      audioBytes: 1024,
+      transcriptChars: 21,
+    });
+    expect(line).not.toContain('Where is the station?');
+  });
+
   test('returns a generic 500 when OpenAI fails, without leaking the error', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     transcriptionsCreate.mockRejectedValue(new Error('invalid api key sk-...'));

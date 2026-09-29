@@ -80,3 +80,27 @@ Size limits (`lib/limits.ts`) return `413`:
 
 - **Audio:** over 2 MB is rejected with `Recording too long`.
 - **Transcript:** over 1,000 characters is rejected with `Text too long`.
+
+## Signed requests and request logs
+
+**Signed requests** (`lib/appAuth.ts`): apps from v1.1 on sign each request. `X-App-Signature` is an HMAC-SHA256, made with `APP_SIGNING_KEY`, over the timestamp, method, path and device ID, and `X-App-Timestamp` carries the timestamp. The `APP_AUTH_MODE` setting decides what happens:
+
+| `APP_AUTH_MODE` | Behavior |
+|---|---|
+| `off` | No checking |
+| `log` (default) | Check and log the result, never block. v1.0 apps keep working. |
+| `enforce` | Unsigned or invalid requests get `401 App update required` |
+
+- **Timing:** signatures older or newer than 5 minutes are rejected, and a signature is tied to one route and one device ID.
+- **Missing key:** if `APP_SIGNING_KEY` is unset, requests are allowed and a warning or error is logged, so a misconfiguration can't lock every user out.
+- **Honest limit:** the key ships inside the app binary, so this deters casual abuse but isn't strong security. Rate limits and the OpenAI spend cap remain the real safety net.
+
+**Request logs** (`lib/requestLog.ts`): each request writes one JSON line, with `"event":"api_request"`, to Vercel → Logs. Each line records:
+
+- the route, status and response time;
+- the app version (`none` for v1.0 apps) and the auth result;
+- the languages, the audio size and text lengths, and the outcome.
+
+The logs never include transcript or translation text, device IDs or IP addresses.
+
+**When to switch to `enforce`:** once almost no log lines show `"appVersion":"none"`, meaning v1.0 users have updated, set `APP_AUTH_MODE=enforce` in Vercel and re-run the deploy workflow.

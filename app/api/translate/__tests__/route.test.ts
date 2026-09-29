@@ -67,6 +67,38 @@ describe('POST /api/translate', () => {
     expect((await POST(translate({ transcript: 'Hello', fromLang: 'en' }))).status).toBe(400);
   });
 
+  test('in enforce mode, rejects unsigned requests with 401 before rate limiting or OpenAI', async () => {
+    vi.stubEnv('APP_AUTH_MODE', 'enforce');
+    vi.stubEnv('APP_SIGNING_KEY', 'test-key');
+
+    const res = await POST(translate({ transcript: 'Hello', fromLang: 'en', toLang: 'es' }));
+
+    expect(res.status).toBe(401);
+    expect(enforceRateLimit).not.toHaveBeenCalled();
+    expect(chatCreate).not.toHaveBeenCalled();
+  });
+
+  test('logs one structured line per request without the transcript or translation text', async () => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await POST(translate({ transcript: 'My secret sentence', fromLang: 'en', toLang: 'es' }));
+
+    expect(log).toHaveBeenCalledTimes(1);
+    const line = log.mock.calls[0][0] as string;
+    expect(JSON.parse(line)).toMatchObject({
+      event: 'api_request',
+      route: 'translate',
+      status: 200,
+      outcome: 'ok',
+      fromLang: 'en',
+      toLang: 'es',
+      transcriptChars: 18,
+      translationChars: 4,
+    });
+    expect(line).not.toContain('My secret sentence');
+    expect(line).not.toContain('Hola');
+  });
+
   test('returns a generic 500 when OpenAI fails', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     chatCreate.mockRejectedValue(new Error('upstream'));
