@@ -17,6 +17,7 @@ import { join } from 'node:path';
 import OpenAI, { toFile } from 'openai';
 import { errorRate, estimateSpeechSeconds } from '../lib/evalScoring';
 import { speechParams, transcriptionLanguageParams, type ModelConfig, type ReasoningEffort } from '../lib/models';
+import { translationSystemPrompt } from '../lib/translationPrompt';
 
 type Phrase = { id: string; lang: string; text: string };
 
@@ -33,11 +34,6 @@ const STT_PRICE_PER_MIN: Record<string, number> = {
 const TEXT_PRICE_PER_MTOK: Record<string, { input: number; output: number }> = {
   'gpt-4o-mini': { input: 0.15, output: 0.6 },
   'gpt-6-luna': { input: 0.1, output: 0.5 },
-};
-
-const LANGUAGE_NAMES: Record<string, string> = {
-  en: 'English', es: 'Spanish', fr: 'French', de: 'German',
-  zh: 'Mandarin Chinese', ar: 'Arabic', ja: 'Japanese', ko: 'Korean',
 };
 
 function arg(name: string, fallback: string): string {
@@ -158,7 +154,8 @@ async function main() {
           model: tm.model,
           ...(tm.effort ? { reasoning_effort: tm.effort } : {}),
           messages: [
-            { role: 'system', content: `You are a professional translator. Translate the user's text from ${LANGUAGE_NAMES[p.lang]} to ${LANGUAGE_NAMES[to]}. Reply with ONLY the translation, no explanations.` },
+            // Same prompt as production, so the eval measures what users get.
+            { role: 'system', content: translationSystemPrompt(p.lang, to) },
             { role: 'user', content: p.text },
           ],
         });

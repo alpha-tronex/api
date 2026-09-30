@@ -24,7 +24,7 @@ export type RequestLog = {
   finish<R extends Response>(res: R): R;
 };
 
-const LANG_CODE = /^[a-z]{2,3}(-[A-Za-z]{2,4})?$/;
+const LANG_CODE = /^(auto|[a-z]{2,3}(-[A-Za-z]{2,4})?)$/;
 const APP_VERSION = /^[0-9A-Za-z.+-]{1,32}$/;
 
 /** Only log values we control the shape of. */

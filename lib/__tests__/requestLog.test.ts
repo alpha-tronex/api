@@ -61,3 +61,14 @@ describe('startRequestLog', () => {
     expect(logged(spy)).toMatchObject({ appVersion: 'invalid', fromLang: 'invalid', toLang: 'es' });
   });
 });
+
+describe('startRequestLog languages', () => {
+  test('logs "auto" as a valid source language', () => {
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const log = startRequestLog('translate', new Request('https://api.example.com/api/translate'));
+    log.set({ fromLang: 'auto', toLang: 'en' });
+    log.finish(new Response(null, { status: 200 }));
+
+    expect(JSON.parse(spy.mock.calls[0][0] as string)).toMatchObject({ fromLang: 'auto', toLang: 'en' });
+  });
+});

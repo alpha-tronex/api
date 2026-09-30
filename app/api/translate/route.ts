@@ -3,19 +3,9 @@ import OpenAI from 'openai';
 import { checkAppAuth } from '@/lib/appAuth';
 import { rejectOversizedTranscript } from '@/lib/limits';
 import { getModelConfig, speechParams } from '@/lib/models';
+import { isSupportedTarget, translationSystemPrompt } from '@/lib/translationPrompt';
 import { enforceRateLimit } from '@/lib/ratelimit';
 import { startRequestLog, type RequestLog } from '@/lib/requestLog';
-
-const LANGUAGE_NAMES: Record<string, string> = {
-  en: 'English',
-  es: 'Spanish',
-  fr: 'French',
-  de: 'German',
-  zh: 'Mandarin Chinese',
-  ar: 'Arabic',
-  ja: 'Japanese',
-  ko: 'Korean',
-};
 
 export async function POST(req: NextRequest) {
   const log = startRequestLog('translate', req);
@@ -49,6 +39,11 @@ async function handle(req: NextRequest, log: RequestLog): Promise<NextResponse> 
       );
     }
 
+    if (!isSupportedTarget(toLang)) {
+      log.set({ outcome: 'bad_request' });
+      return NextResponse.json({ error: 'Unsupported target language' }, { status: 400 });
+    }
+
     const textTooLong = rejectOversizedTranscript(String(transcript));
     if (textTooLong) {
       log.set({ outcome: 'text_too_long' });
@@ -58,9 +53,6 @@ async function handle(req: NextRequest, log: RequestLog): Promise<NextResponse> 
     const models = getModelConfig();
     log.set({ translateModel: models.translateModel, ttsModel: models.ttsModel });
 
-    const fromName = LANGUAGE_NAMES[fromLang] ?? fromLang;
-    const toName   = LANGUAGE_NAMES[toLang]   ?? toLang;
-
     // Step 1: translate
     const completion = await openai.chat.completions.create({
       model: models.translateModel,
@@ -68,7 +60,7 @@ async function handle(req: NextRequest, log: RequestLog): Promise<NextResponse> 
       messages: [
         {
           role: 'system',
-          content: `You are a professional translator. Translate the user's text from ${fromName} to ${toName}. Reply with ONLY the translation, no explanations.`,
+          content: translationSystemPrompt(fromLang, toLang),
         },
         { role: 'user', content: transcript },
       ],
