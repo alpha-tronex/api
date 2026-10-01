@@ -1,3 +1,15 @@
+# Language Translator API
+
+Next.js backend for the Language Translator app: transcription, translation and text-to-speech.
+
+## Where things deploy
+
+| Repo | Trigger | Goes to |
+|---|---|---|
+| [`api`](https://github.com/alpha-tronex/api) | push to `main` (after checks pass) | **Vercel** |
+| [`language-translator`](https://github.com/alpha-tronex/language-translator) | push a `v*` tag, e.g. `v1.2.0` (after checks pass) | **EAS → TestFlight** |
+| `tts-service` (planned, weeks 9–10) | push to `main` (after checks pass) | **Hetzner** |
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
@@ -120,3 +132,15 @@ Every model is set by a Vercel environment variable, with a default in `lib/mode
 `/api/transcribe` also returns `detectedLang` when the model reports it, which auto-detect will use. The request logs record which models served each request.
 
 **Comparing models:** `npm run eval:models` runs the golden test set in `eval/` through several models and writes a side-by-side report. See `eval/README.md`.
+
+## Routes
+
+| Route | Input | Output |
+|---|---|---|
+| `POST /api/transcribe` | multipart `audio`, `fromLang` (a language code or `auto`) | `{ transcript, detectedLang? }` |
+| `POST /api/translate` | JSON `{ transcript, fromLang, toLang }` | `{ translation, audioBase64, mimeType }` |
+| `POST /api/practice` | multipart `audio`, `lang` (target language, never `auto`) | `{ transcript }`, the student's attempt. Scoring happens in the app. |
+
+All three share the same size limits, request signing, rate limiting and request logging (`lib/speechUpload.ts` for the audio routes).
+
+`/api/practice` never sends the expected phrase to the model, because that would bias the transcript toward the right answer.
