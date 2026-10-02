@@ -14,7 +14,8 @@ vi.mock('openai', () => ({
 vi.mock('@/lib/ratelimit', () => ({ enforceRateLimit }));
 
 import { POST } from '../route';
-import { MAX_SPEAK_CHARS } from '@/lib/limits';
+import { MAX_SPEAK_CHARS, MAX_TRANSCRIPT_CHARS } from '@/lib/limits';
+import { TTS_INSTRUCTIONS } from '@/lib/models';
 
 function speak(body: unknown) {
   return new NextRequest('http://localhost/api/speak', {
@@ -67,6 +68,26 @@ describe('POST /api/speak', () => {
     expect(res.status).toBe(413);
     expect(await res.json()).toEqual({ error: 'Text too long' });
     expect(speechCreate).not.toHaveBeenCalled();
+  });
+
+  test('phrase mode reads a whole saved translation with the normal voice instructions', async () => {
+    const saved = '¿Dónde está la estación de tren más cercana, por favor? Necesito llegar antes de las ocho.';
+
+    const res = await POST(speak({ text: saved, lang: 'es', phrase: true }));
+
+    expect(res.status).toBe(200);
+    expect(speechCreate.mock.calls[0][0]).toMatchObject({ input: saved, instructions: TTS_INSTRUCTIONS });
+  });
+
+  test('phrase mode is capped like a transcript (413 over 1,000 characters)', async () => {
+    expect((await POST(speak({ text: 'a'.repeat(MAX_TRANSCRIPT_CHARS), lang: 'en', phrase: true }))).status).toBe(200);
+    expect((await POST(speak({ text: 'a'.repeat(MAX_TRANSCRIPT_CHARS + 1), lang: 'en', phrase: true }))).status).toBe(413);
+  });
+
+  test('only a real boolean turns phrase mode on, so the word cap cannot be skipped by accident', async () => {
+    const res = await POST(speak({ text: 'a'.repeat(MAX_SPEAK_CHARS + 1), lang: 'en', phrase: 'yes' }));
+
+    expect(res.status).toBe(413);
   });
 
   test('accepts text exactly at the limit', async () => {

@@ -1,16 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { checkAppAuth } from '@/lib/appAuth';
-import { rejectOversizedSpeakText } from '@/lib/limits';
-import { getModelConfig, speechParams, wordInstructions } from '@/lib/models';
+import { rejectOversizedSpeakText, rejectOversizedTranscript } from '@/lib/limits';
+import { getModelConfig, speechParams, TTS_INSTRUCTIONS, wordInstructions } from '@/lib/models';
 import { enforceRateLimit } from '@/lib/ratelimit';
 import { startRequestLog, type RequestLog } from '@/lib/requestLog';
 import { isSupportedTarget, LANGUAGE_NAMES } from '@/lib/translationPrompt';
 
 /**
- * Learning mode, "tap a word to hear it": speaks one word (or a short
- * chunk) of a translation in the given language. Whole phrases are already
- * spoken by /api/translate, so the text here is capped at a few words.
+ * Text-to-speech without translating, for learning mode:
+ *
+ * - default: one word (or a short chunk) of a translation, "tap a word to
+ *   hear it". Capped at a few words.
+ * - `phrase: true`: a whole saved translation from the practice list, which
+ *   has text but no audio on the phone. Capped like a transcript.
  */
 export async function POST(req: NextRequest) {
   const log = startRequestLog('speak', req);
@@ -35,6 +38,7 @@ async function handle(req: NextRequest, log: RequestLog): Promise<NextResponse> 
     const body = await req.json().catch(() => null);
     const text = typeof body?.text === 'string' ? body.text.trim() : '';
     const lang: unknown = body?.lang;
+    const phrase = body?.phrase === true;
     log.set({ toLang: typeof lang === 'string' ? lang : undefined, transcriptChars: text.length });
 
     if (!text || !lang) {
@@ -46,7 +50,7 @@ async function handle(req: NextRequest, log: RequestLog): Promise<NextResponse> 
       log.set({ outcome: 'bad_request' });
       return NextResponse.json({ error: 'Unsupported language' }, { status: 400 });
     }
-    const tooLong = rejectOversizedSpeakText(text);
+    const tooLong = phrase ? rejectOversizedTranscript(text) : rejectOversizedSpeakText(text);
     if (tooLong) {
       log.set({ outcome: 'text_too_long' });
       return tooLong;
@@ -56,7 +60,7 @@ async function handle(req: NextRequest, log: RequestLog): Promise<NextResponse> 
     log.set({ ttsModel: models.ttsModel });
 
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    const tts = await openai.audio.speech.create(speechParams(models, text, wordInstructions(LANGUAGE_NAMES[lang])));
+    const tts = await openai.audio.speech.create(speechParams(models, text, phrase ? TTS_INSTRUCTIONS : wordInstructions(LANGUAGE_NAMES[lang])));
     const audioBase64 = Buffer.from(await tts.arrayBuffer()).toString('base64');
 
     log.set({ outcome: 'ok' });

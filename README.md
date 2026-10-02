@@ -140,7 +140,7 @@ Every model is set by a Vercel environment variable, with a default in `lib/mode
 | `POST /api/transcribe` | multipart `audio`, `fromLang` (a language code or `auto`) | `{ transcript, detectedLang? }` |
 | `POST /api/translate` | JSON `{ transcript, fromLang, toLang }` | `{ translation, audioBase64, mimeType }` |
 | `POST /api/practice` | multipart `audio`, `lang` (target language, never `auto`) | `{ transcript }`, the student's attempt. Scoring happens in the app. |
-| `POST /api/speak` | JSON `{ text, lang }`, `text` up to 60 characters | `{ audioBase64, mimeType }`, one word spoken in that language ("tap a word to hear it"). |
+| `POST /api/speak` | JSON `{ text, lang, phrase? }`. `text` up to 60 characters, or up to 1,000 with `phrase: true` | `{ audioBase64, mimeType }`. One word spoken in that language ("tap a word to hear it"), or with `phrase: true` a whole saved translation from the practice list. No translation happens here. |
 
 All three share the same size limits, request signing, rate limiting and request logging (`lib/speechUpload.ts` for the audio routes).
 
