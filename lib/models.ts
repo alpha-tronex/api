@@ -23,6 +23,16 @@ export const DEFAULT_MODELS = {
 
 export const TTS_INSTRUCTIONS = 'Speak clearly and naturally at a moderate pace.';
 
+/**
+ * Learning mode, "tap a word": a lone word gives the voice model no context
+ * to guess the language from ("pain" is French bread or English hurt), so
+ * name it. Only called with a language name from LANGUAGE_NAMES, never with
+ * client text.
+ */
+export function wordInstructions(languageName: string): string {
+  return `The text is in ${languageName}. Pronounce it clearly and carefully in ${languageName}, as a teacher would for a student.`;
+}
+
 const REASONING_EFFORTS = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'] as const;
 export type ReasoningEffort = (typeof REASONING_EFFORTS)[number];
 
@@ -77,12 +87,12 @@ const NEWER_VOICES = new Set(['marin', 'cedar', 'ballad', 'verse']);
  * style instructions and lack the newer voices, so fall back safely if
  * TTS_MODEL is rolled back to one of them.
  */
-export function speechParams(config: ModelConfig, input: string) {
+export function speechParams(config: ModelConfig, input: string, instructions: string = TTS_INSTRUCTIONS) {
   const legacy = config.ttsModel.startsWith('tts-1');
   return {
     model: config.ttsModel,
     voice: legacy && NEWER_VOICES.has(config.ttsVoice) ? 'alloy' : config.ttsVoice,
     input,
-    ...(legacy ? {} : { instructions: TTS_INSTRUCTIONS }),
+    ...(legacy ? {} : { instructions }),
   };
 }

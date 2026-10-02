@@ -5,6 +5,7 @@ import {
   speechParams,
   transcriptionLanguageParams,
   TTS_INSTRUCTIONS,
+  wordInstructions,
 } from '../models';
 
 describe('getModelConfig', () => {
@@ -76,5 +77,25 @@ describe('speechParams', () => {
 
   test('keeps a voice tts-1 supports', () => {
     expect(speechParams({ ...config, ttsModel: 'tts-1-hd', ttsVoice: 'nova' }, 'Hi').voice).toBe('nova');
+  });
+});
+
+describe('single-word speech (learning mode)', () => {
+  const config = getModelConfig({});
+
+  test('names the language, because a lone word gives the voice no context to guess it', () => {
+    const params = speechParams(config, 'pain', wordInstructions('French'));
+
+    expect(params).toMatchObject({ input: 'pain', instructions: expect.stringContaining('in French') });
+  });
+
+  test('keeps the normal instructions when none are passed', () => {
+    expect(speechParams(config, 'Hola')).toMatchObject({ instructions: TTS_INSTRUCTIONS });
+  });
+
+  test('a legacy tts-1 model gets no instructions at all (it rejects them)', () => {
+    const legacy = getModelConfig({ TTS_MODEL: 'tts-1' });
+
+    expect(speechParams(legacy, 'pain', wordInstructions('French'))).not.toHaveProperty('instructions');
   });
 });

@@ -1,9 +1,11 @@
 import { describe, expect, test } from 'vitest';
 import {
   MAX_AUDIO_BYTES,
+  MAX_SPEAK_CHARS,
   MAX_TRANSCRIPT_CHARS,
   MAX_UPLOAD_BYTES,
   rejectOversizedAudio,
+  rejectOversizedSpeakText,
   rejectOversizedTranscript,
   rejectOversizedUpload,
 } from '../limits';
@@ -49,5 +51,18 @@ describe('rejectOversizedTranscript', () => {
 
   test('allows text at exactly 1,000 characters', () => {
     expect(rejectOversizedTranscript('a'.repeat(MAX_TRANSCRIPT_CHARS))).toBeNull();
+  });
+});
+
+describe('rejectOversizedSpeakText', () => {
+  test('allows a word or short chunk up to the cap', () => {
+    expect(rejectOversizedSpeakText('a'.repeat(MAX_SPEAK_CHARS))).toBeNull();
+  });
+
+  test('rejects anything longer with 413: single-word speech must not become a free phrase reader', async () => {
+    const res = rejectOversizedSpeakText('a'.repeat(MAX_SPEAK_CHARS + 1));
+
+    expect(res?.status).toBe(413);
+    expect(await res?.json()).toEqual({ error: 'Text too long' });
   });
 });

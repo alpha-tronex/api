@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server';
 /** ~60 seconds of the app's AAC recording is well under this. */
 export const MAX_AUDIO_BYTES = 2 * 1024 * 1024;
 export const MAX_TRANSCRIPT_CHARS = 1000;
+/** /api/speak is for one word (or a short chunk), not whole phrases. */
+export const MAX_SPEAK_CHARS = 60;
 /** Audio plus multipart overhead. */
 export const MAX_UPLOAD_BYTES = MAX_AUDIO_BYTES + 64 * 1024;
 
@@ -28,4 +30,8 @@ export function rejectOversizedAudio(audio: { size: number }): NextResponse | nu
 
 export function rejectOversizedTranscript(transcript: string): NextResponse | null {
   return transcript.length > MAX_TRANSCRIPT_CHARS ? tooLarge('Text too long') : null;
+}
+
+export function rejectOversizedSpeakText(text: string): NextResponse | null {
+  return text.length > MAX_SPEAK_CHARS ? tooLarge('Text too long') : null;
 }

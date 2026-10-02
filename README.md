@@ -73,7 +73,7 @@ If the checks fail, production stays on the previous version. Vercel's own Git a
 
 ## Rate limiting and request limits
 
-`/api/transcribe` and `/api/translate` are rate-limited with Upstash Redis (`lib/ratelimit.ts`):
+Every `/api/*` route is rate-limited with Upstash Redis (`lib/ratelimit.ts`):
 
 | Limit | Key | Default | Env override |
 |---|---|---|---|
@@ -140,6 +140,7 @@ Every model is set by a Vercel environment variable, with a default in `lib/mode
 | `POST /api/transcribe` | multipart `audio`, `fromLang` (a language code or `auto`) | `{ transcript, detectedLang? }` |
 | `POST /api/translate` | JSON `{ transcript, fromLang, toLang }` | `{ translation, audioBase64, mimeType }` |
 | `POST /api/practice` | multipart `audio`, `lang` (target language, never `auto`) | `{ transcript }`, the student's attempt. Scoring happens in the app. |
+| `POST /api/speak` | JSON `{ text, lang }`, `text` up to 60 characters | `{ audioBase64, mimeType }`, one word spoken in that language ("tap a word to hear it"). |
 
 All three share the same size limits, request signing, rate limiting and request logging (`lib/speechUpload.ts` for the audio routes).
 
