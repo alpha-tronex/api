@@ -138,4 +138,12 @@ describe('POST /api/transcribe', () => {
     expect(res.status).toBe(500);
     expect(await res.json()).toEqual({ error: 'Transcription failed' });
   });
+
+  test('rejects spoken Wolof as the source with a clear message, before calling the speech model', async () => {
+    const res = await POST(upload({ audio: smallAudio(), fromLang: 'wo' }));
+
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "Speech input isn't available for this language yet. Type it instead." });
+    expect(transcriptionsCreate).not.toHaveBeenCalled();
+  });
 });

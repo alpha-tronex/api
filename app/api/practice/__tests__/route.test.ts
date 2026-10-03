@@ -91,4 +91,12 @@ describe('POST /api/practice', () => {
     expect(res.status).toBe(500);
     expect(await res.json()).toEqual({ error: 'Practice transcription failed' });
   });
+
+  test.each(['wo', 'bm'])('rejects practice in %s with a clear message: the speech model cannot transcribe it', async (lang) => {
+    const res = await POST(attempt({ audio: clip(), lang }));
+
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "Speech input isn't available for this language yet. Type it instead." });
+    expect(transcriptionsCreate).not.toHaveBeenCalled();
+  });
 });

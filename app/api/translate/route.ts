@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { checkAppAuth } from '@/lib/appAuth';
 import { rejectOversizedTranscript } from '@/lib/limits';
-import { getModelConfig, speechParams } from '@/lib/models';
+import { getModelConfig } from '@/lib/models';
 import { isSupportedTarget, translationSystemPrompt } from '@/lib/translationPrompt';
 import { enforceRateLimit } from '@/lib/ratelimit';
 import { startRequestLog, type RequestLog } from '@/lib/requestLog';
+import { synthesizeSpeech, ttsProviderFor } from '@/lib/tts';
 
 export async function POST(req: NextRequest) {
   const log = startRequestLog('translate', req);
@@ -68,17 +69,21 @@ async function handle(req: NextRequest, log: RequestLog): Promise<NextResponse> 
 
     const translation = completion.choices[0].message.content?.trim() ?? '';
 
-    // Step 2: convert translation to speech
-    const ttsResponse = await openai.audio.speech.create(speechParams(models, translation));
+    // Step 2: convert translation to speech. A voice failure must not lose
+    // the translation, so the text goes back without audio in that case.
+    const audio = await synthesizeSpeech({ text: translation, lang: toLang, models }, { openai });
 
-    const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
-    const audioBase64 = audioBuffer.toString('base64');
-
-    log.set({ outcome: 'ok', translationChars: translation.length });
+    log.set({
+      outcome: 'ok',
+      translationChars: translation.length,
+      ttsProvider: ttsProviderFor(toLang),
+      audio: audio ? 'ok' : 'unavailable',
+    });
     return NextResponse.json({
       translation,
-      audioBase64,
+      audioBase64: audio ? audio.toString('base64') : null,
       mimeType: 'audio/mpeg',
+      ...(audio ? {} : { audioUnavailable: true }),
     });
   } catch (err) {
     console.error('[/api/translate]', err);

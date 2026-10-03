@@ -17,6 +17,9 @@ export type LogFields = {
   translateModel?: string;
   ttsModel?: string;
   detectedLang?: string;
+  ttsProvider?: string;
+  /** 'ok' or 'unavailable' when a route tried to make audio. */
+  audio?: string;
 };
 
 export type RequestLog = {

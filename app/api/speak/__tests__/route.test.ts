@@ -132,13 +132,52 @@ describe('POST /api/speak', () => {
     expect(line).not.toContain('secretword');
   });
 
-  test('returns a generic 500 when OpenAI fails', async () => {
+  test('returns 503 "Audio temporarily unavailable" when the voice model fails, without leaking why', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    speechCreate.mockRejectedValue(new Error('upstream'));
+    speechCreate.mockRejectedValue(new Error('upstream secret detail'));
 
     const res = await POST(speak({ text: 'hola', lang: 'es' }));
 
-    expect(res.status).toBe(500);
-    expect(await res.json()).toEqual({ error: 'Speech failed' });
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ error: 'Audio temporarily unavailable' });
+  });
+
+  describe('Wolof and Bambara (self-hosted voice service)', () => {
+    const fetchMock = vi.fn();
+    beforeEach(() => {
+      fetchMock.mockReset().mockResolvedValue(new Response(new Uint8Array([9, 9, 9]), { status: 200 }));
+      vi.stubGlobal('fetch', fetchMock);
+      vi.stubEnv('TTS_SERVICE_URL', 'https://tts.example.test');
+      vi.stubEnv('TTS_SERVICE_KEY', 'shared-secret');
+    });
+
+    test('a Wolof word is spoken by tts-service, not OpenAI', async () => {
+      const res = await POST(speak({ text: 'jërëjëf', lang: 'wo' }));
+
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ audioBase64: 'CQkJ', mimeType: 'audio/mpeg' });
+      expect(speechCreate).not.toHaveBeenCalled();
+      const [url, init] = fetchMock.mock.calls[0];
+      expect(url).toBe('https://tts.example.test/speak');
+      expect(init.headers['X-TTS-Key']).toBe('shared-secret');
+      expect(JSON.parse(init.body)).toEqual({ lang: 'wo', text: 'jërëjëf' });
+    });
+
+    test('a saved Bambara phrase is spoken by tts-service too', async () => {
+      const res = await POST(speak({ text: 'I ni ce. I ka kɛnɛ wa?', lang: 'bm', phrase: true }));
+
+      expect(res.status).toBe(200);
+      expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ lang: 'bm', text: 'I ni ce. I ka kɛnɛ wa?' });
+    });
+
+    test('returns 503 when tts-service is down', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      fetchMock.mockRejectedValue(new Error('connect ECONNREFUSED'));
+
+      const res = await POST(speak({ text: 'jërëjëf', lang: 'wo' }));
+
+      expect(res.status).toBe(503);
+      expect(await res.json()).toEqual({ error: 'Audio temporarily unavailable' });
+    });
   });
 });

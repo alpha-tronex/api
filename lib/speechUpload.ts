@@ -5,7 +5,7 @@ import { rejectOversizedAudio, rejectOversizedUpload } from './limits';
 import { getModelConfig, transcriptionLanguageParams } from './models';
 import { enforceRateLimit } from './ratelimit';
 import type { RequestLog } from './requestLog';
-import { isSupportedTarget } from './translationPrompt';
+import { isSupportedTarget, supportsSpeechInput } from './languages';
 
 export type SpeechUploadOptions = {
   /** Form field holding the language hint ("fromLang" or "lang"). */
@@ -60,6 +60,15 @@ export async function handleSpeechUpload(
     if (options.requireSupportedLang && !isSupportedTarget(lang)) {
       log.set({ outcome: 'bad_request' });
       return NextResponse.json({ error: 'Unsupported language' }, { status: 400 });
+    }
+
+    // Wolof and Bambara can be typed and translated, but the speech model can't transcribe them.
+    if (!supportsSpeechInput(lang)) {
+      log.set({ outcome: 'speech_unsupported' });
+      return NextResponse.json(
+        { error: "Speech input isn't available for this language yet. Type it instead." },
+        { status: 400 }
+      );
     }
 
     const audioTooLarge = rejectOversizedAudio(audio);

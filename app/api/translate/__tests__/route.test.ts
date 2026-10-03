@@ -137,4 +137,57 @@ describe('POST /api/translate', () => {
     expect(res.status).toBe(500);
     expect(await res.json()).toEqual({ error: 'Translation failed' });
   });
+
+  test('a voice failure still returns the translation, with audioBase64 null', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    speechCreate.mockRejectedValue(new Error('voice model down'));
+
+    const res = await POST(translate({ transcript: 'Hello', fromLang: 'en', toLang: 'es' }));
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ translation: 'Hola', audioBase64: null, mimeType: 'audio/mpeg', audioUnavailable: true });
+  });
+
+  describe('Wolof and Bambara (self-hosted voice service)', () => {
+    const fetchMock = vi.fn();
+    beforeEach(() => {
+      chatCreate.mockResolvedValue({ choices: [{ message: { content: 'Na nga def?' } }] });
+      fetchMock.mockReset().mockResolvedValue(new Response(new Uint8Array([9, 9, 9]), { status: 200 }));
+      vi.stubGlobal('fetch', fetchMock);
+      vi.stubEnv('TTS_SERVICE_URL', 'https://tts.example.test/');
+      vi.stubEnv('TTS_SERVICE_KEY', 'shared-secret');
+    });
+
+    test('English → Wolof translates with OpenAI and speaks with tts-service', async () => {
+      const res = await POST(translate({ transcript: 'How are you?', fromLang: 'en', toLang: 'wo' }));
+
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ translation: 'Na nga def?', audioBase64: 'CQkJ', mimeType: 'audio/mpeg' });
+      expect(chatCreate.mock.calls[0][0].messages[0].content).toContain('from English to Wolof');
+      expect(speechCreate).not.toHaveBeenCalled();
+      expect(fetchMock.mock.calls[0][0]).toBe('https://tts.example.test/speak');
+      expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ lang: 'wo', text: 'Na nga def?' });
+    });
+
+    test('Wolof → English is spoken by OpenAI: the provider follows the TARGET language', async () => {
+      chatCreate.mockResolvedValue({ choices: [{ message: { content: 'How are you?' } }] });
+
+      await POST(translate({ transcript: 'Na nga def?', fromLang: 'wo', toLang: 'en' }));
+
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(speechCreate).toHaveBeenCalledWith(expect.objectContaining({ input: 'How are you?' }));
+    });
+
+    test('when tts-service is down the Bambara translation still comes back, without audio', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+      fetchMock.mockResolvedValue(new Response('bad gateway', { status: 502 }));
+
+      const res = await POST(translate({ transcript: 'Hello', fromLang: 'en', toLang: 'bm' }));
+
+      expect(res.status).toBe(200);
+      expect(await res.json()).toMatchObject({ translation: 'Na nga def?', audioBase64: null, audioUnavailable: true });
+      expect(JSON.parse(log.mock.calls[0][0] as string)).toMatchObject({ ttsProvider: 'local', audio: 'unavailable', outcome: 'ok' });
+    });
+  });
 });

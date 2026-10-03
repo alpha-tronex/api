@@ -138,10 +138,30 @@ Every model is set by a Vercel environment variable, with a default in `lib/mode
 | Route | Input | Output |
 |---|---|---|
 | `POST /api/transcribe` | multipart `audio`, `fromLang` (a language code or `auto`) | `{ transcript, detectedLang? }` |
-| `POST /api/translate` | JSON `{ transcript, fromLang, toLang }` | `{ translation, audioBase64, mimeType }` |
+| `POST /api/translate` | JSON `{ transcript, fromLang, toLang }` | `{ translation, audioBase64, mimeType }`. If the voice can't be made, `audioBase64` is `null` and `audioUnavailable: true`; the translation is still returned. |
+| `GET /api/languages` | none | `{ languages: [{ code, name, ttsProvider, speechInput }] }`. Public and cached. |
 | `POST /api/practice` | multipart `audio`, `lang` (target language, never `auto`) | `{ transcript }`, the student's attempt. Scoring happens in the app. |
 | `POST /api/speak` | JSON `{ text, lang, phrase? }`. `text` up to 60 characters, or up to 1,000 with `phrase: true` | `{ audioBase64, mimeType }`. One word spoken in that language ("tap a word to hear it"), or with `phrase: true` a whole saved translation from the practice list. No translation happens here. |
 
 All three share the same size limits, request signing, rate limiting and request logging (`lib/speechUpload.ts` for the audio routes).
 
 `/api/practice` never sends the expected phrase to the model, because that would bias the transcript toward the right answer.
+
+## Wolof and Bambara (self-hosted voices)
+
+`lib/languages.ts` is the API's one list of languages. Each has a `ttsProvider`:
+
+- `openai`: the eight original languages, spoken by the OpenAI voice model.
+- `local`: Wolof (`wo`) and Bambara (`bm`), spoken by **tts-service** on the Hetzner server, because OpenAI's voices don't cover them. `lib/tts.ts` routes each request.
+
+| Variable | Value |
+|---|---|
+| `TTS_SERVICE_URL` | `https://tts.alphatronex.com` |
+| `TTS_SERVICE_KEY` | The same secret as `TTS_SHARED_SECRET` on the server |
+| `TTS_SERVICE_TIMEOUT_MS` | Optional, default `12000` |
+
+If tts-service is down, slow or not configured, `/api/translate` still returns the translation with `audioBase64: null`, and `/api/speak` returns `503`. The request log records `ttsProvider` and `audio: "ok" | "unavailable"`.
+
+Translation for these two still uses the OpenAI translation model. Speech **input** is not available for them (`speechInput: false`): `/api/transcribe` and `/api/practice` answer `400` and the app asks the user to type instead.
+
+The app keeps the same codes in `language-translator/lib/languages.ts`. When adding a language, change both.

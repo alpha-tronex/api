@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { checkAppAuth } from '@/lib/appAuth';
 import { rejectOversizedSpeakText, rejectOversizedTranscript } from '@/lib/limits';
-import { getModelConfig, speechParams, TTS_INSTRUCTIONS, wordInstructions } from '@/lib/models';
+import { getModelConfig, TTS_INSTRUCTIONS, wordInstructions } from '@/lib/models';
 import { enforceRateLimit } from '@/lib/ratelimit';
 import { startRequestLog, type RequestLog } from '@/lib/requestLog';
-import { isSupportedTarget, LANGUAGE_NAMES } from '@/lib/translationPrompt';
+import { isSupportedTarget, LANGUAGE_NAMES } from '@/lib/languages';
+import { synthesizeSpeech, ttsProviderFor } from '@/lib/tts';
 
 /**
  * Text-to-speech without translating, for learning mode:
@@ -14,6 +15,8 @@ import { isSupportedTarget, LANGUAGE_NAMES } from '@/lib/translationPrompt';
  *   hear it". Capped at a few words.
  * - `phrase: true`: a whole saved translation from the practice list, which
  *   has text but no audio on the phone. Capped like a transcript.
+ *
+ * Wolof and Bambara are spoken by the self-hosted tts-service (lib/tts.ts).
  */
 export async function POST(req: NextRequest) {
   const log = startRequestLog('speak', req);
@@ -57,11 +60,18 @@ async function handle(req: NextRequest, log: RequestLog): Promise<NextResponse> 
     }
 
     const models = getModelConfig();
-    log.set({ ttsModel: models.ttsModel });
+    log.set({ ttsModel: models.ttsModel, ttsProvider: ttsProviderFor(lang) });
 
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    const tts = await openai.audio.speech.create(speechParams(models, text, phrase ? TTS_INSTRUCTIONS : wordInstructions(LANGUAGE_NAMES[lang])));
-    const audioBase64 = Buffer.from(await tts.arrayBuffer()).toString('base64');
+    const audio = await synthesizeSpeech(
+      { text, lang, models, instructions: phrase ? TTS_INSTRUCTIONS : wordInstructions(LANGUAGE_NAMES[lang]) },
+      { openai }
+    );
+    if (!audio) {
+      log.set({ outcome: 'audio_unavailable', audio: 'unavailable' });
+      return NextResponse.json({ error: 'Audio temporarily unavailable' }, { status: 503 });
+    }
+    const audioBase64 = audio.toString('base64');
 
     log.set({ outcome: 'ok' });
     return NextResponse.json({ audioBase64, mimeType: 'audio/mpeg' });
