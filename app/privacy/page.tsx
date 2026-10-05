@@ -1,18 +1,18 @@
 export const metadata = {
-  title: 'Privacy Policy — Thiam Language Translator',
+  title: 'Privacy Policy — TransLearn by Alphatronex',
 };
 
 export default function PrivacyPage() {
   return (
     <main style={styles.container}>
-      <h1 style={styles.h1}>Privacy Policy — Thiam Language Translator</h1>
+      <h1 style={styles.h1}>Privacy Policy — TransLearn by Alphatronex</h1>
       <p style={styles.meta}>Last updated: October 3, 2026</p>
 
       <hr style={styles.hr} />
 
       <h2 style={styles.h2}>What This App Does</h2>
       <p style={styles.p}>
-        Thiam Language Translator takes a phrase you speak or type, translates it into your chosen
+        TransLearn by Alphatronex takes a phrase you speak or type, translates it into your chosen
         language, and plays the translation aloud. In practice mode you can say the translation
         back and see how closely it matched. No account or login is required.
       </p>
